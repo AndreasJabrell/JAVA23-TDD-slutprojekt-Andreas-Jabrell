@@ -1,4 +1,5 @@
 import java.util.Objects;
+import java.util.Scanner;
 
 public class ATM {
     private Bank bank;
@@ -16,9 +17,9 @@ public class ATM {
     public boolean enterPin(String pin) {
         /*if (currentUser.getFailedAttempts() < 3) {*/
             if (!validateInput(pin)) {
-                currentUser.incrementFailedAttempts();
-                System.out.println("Invalid Pin");
-                System.out.println(currentUser.getFailedAttempts());
+                //currentUser.incrementFailedAttempts();
+                //System.out.println("Invalid Pin");
+                //System.out.println(currentUser.getFailedAttempts());
                 return false;
             }
         //}
@@ -26,7 +27,10 @@ public class ATM {
         return currentUser.getPin() != null && Objects.equals(currentUser.getPin(), pin);
     }
 
-    public double checkBalance() {
+    public double checkBalance(String id) {
+        if(currentUser != null) {
+            return currentUser.getBalance();
+        }
         return 0;
     }
 
@@ -46,4 +50,31 @@ public class ATM {
         }
     }
 
+
+    public boolean isBalancePositive(int balance) {
+        return balance >= 0;
+    }
+
+    public static void main(String[] args){
+        User user = new User("1234", "9999", 500.0);
+        ATM atm = new ATM();
+        atm.setUser(user);
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("hej, välkommen till banken, sätt in ditt kort(alltså skriv in ditt id");
+        String id = scanner.nextLine();
+        System.out.println("skriv in din pin kod");
+        String pin = scanner.nextLine();
+
+        if(atm.insertCard(id) && atm.enterPin(pin)) {
+            System.out.println("välkommen");
+        } else {
+            System.out.println("oopsie");
+        }
+        /*atm.insertCard("1234");
+        atm.enterPin("9999");
+        System.out.println(user.getBalance());
+        System.out.println(atm.withdraw(1));
+        System.out.println(atm.checkBalance("1234"));*/
+
+    }
 }

@@ -17,7 +17,4 @@ public class Bank implements BankInterface {
         return "MockBank";
     }
 
-    public void addUser(User user) {
-        users.put(user.getId(), user);
-    }
 }

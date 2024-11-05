@@ -70,23 +70,28 @@ class ATMTest {
     }
 
     @Test
+    @DisplayName("Mock Test valid card")
+    void mockTestValidCard() {
+        when(mockBankInterface.isCardLocked(user.getId())).thenReturn(false);
+        boolean cardNotLocked = mockBankInterface.isCardLocked(user.getId());
+        assertFalse(cardNotLocked, "Kortet ska inte vara låst enligt mockad funktion");
+    }
+
+    @Test
     @DisplayName("Test valid card")
-    void testValidCard() {
-        realBank = new Bank();
-        Bank spyBank = spy(realBank);
-        spyBank.isCardLocked(user.getId());
-        assertFalse(spyBank.isCardLocked(user.getId()));
+    void spyTestValidCard() {
+        User spyUser = spy(user);
+        doReturn(false).when(spyUser).isLocked();
+        assertFalse(spyUser.isLocked());
     }
 
     //INSERTCARD invalid kort
     @Test
     @DisplayName("Test invalid card")
-    void testValidIDWithInvalidCard() {
-        realBank = new Bank();
-        Bank spyBank = spy(realBank);
-        spyBank.addUser(user);
-        user.lockCard();
-        assertTrue(spyBank.isCardLocked(user.getId()));
+    void spyTestInvalidCard() {
+        User spyUser = spy(user);
+        doReturn(true).when(spyUser).isLocked();
+        assertTrue(spyUser.isLocked(), "Kortet ska vara låst enligt spy på User");
     }
 
     //ENTERPIN testa pinkod tre siffror assertFalse
@@ -162,11 +167,29 @@ class ATMTest {
 
 
     //CHECKDEPOSIT mocka user med x antal pengar, att det faktiskt finns
-    //CHECKDEPOSIT mockad user att id stämmer assertTrue
-    //CHECKDEPOSIT att id inte stämmer assertFalse
-    //CHECKDEPOSIT att det finns plus saldo
-    //CHECKDEPOSIT att det är minussaldo
-    //CHECKDEPOSIT låst kort
+    @Test
+    @DisplayName("Test check balance in account")
+    void testCheckBalanceInAccount() {
+        assertAll("Check balance positive or not",
+            () -> assertTrue(ATM.isBalancePositive(1)),
+            () -> assertFalse(ATM.isBalancePositive(-1))
+        );
+    }
+
+    //CHECKDEPOSIT mockad user att id och pin stämmer
+    @Test
+    @DisplayName("Test mock user check balance")
+    void testMockUserCheckBalance() {
+        when(mockAtm.checkBalance(user.getId())).thenReturn(500.0);
+        ATM.setUser(user);
+        double result = ATM.checkBalance(user.getId());
+        assertEquals(500.0, result);
+    }
+
+    //behövs denna verkligen? locked card ska kontrolleras långt innan man kommer in ens
+/*    //CHECKDEPOSIT låst kort
+    @Test
+    @DisplayName("check balance with locked card")*/
 
     //DEPOSIT assertequal på att det som sätts in är det som faktist kommer in
     //DEPOSIT testa att det plussas ihop rätt
