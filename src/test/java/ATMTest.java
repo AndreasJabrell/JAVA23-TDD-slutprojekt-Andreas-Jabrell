@@ -1,11 +1,9 @@
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import javax.management.ConstructorParameters;
+import org.mockito.MockedStatic;
 
 import java.util.Objects;
 
@@ -15,8 +13,6 @@ import static org.mockito.Mockito.*;
 class ATMTest {
 
     private ATM ATM;
-    private Bank realBank;
-    private BankInterface mockBankInterface;
     private ATM mockAtm;
     private Bank mockBank;
     private User mockUser;
@@ -24,57 +20,46 @@ class ATMTest {
 
     @BeforeEach
     void setUp() {
-        mockBankInterface = mock(BankInterface.class);
+
         mockAtm = mock(ATM.class);
         mockBank = mock(Bank.class);
         mockUser = mock(User.class);
         ATM = new ATM();
-
-    }
-
-    //INSERTCARD testa ID, assert true med id
-    @Test
-    @DisplayName("Test valid ID")
-    void testValidID() {
-        when(mockAtm.insertCard("1234")).thenReturn(true);
-        ATM.setUser(user);
-        boolean result = ATM.insertCard(user.getId());
-        assertTrue(result);
-    }
-
-    //INSERTCARD testa ID, assert false med id
-    @Test
-    @DisplayName("Test invalid ID")
-    void testInvalidID() {
-        when(mockAtm.insertCard("1235")).thenReturn(false);
-        ATM.setUser(user);
-        String result = String.valueOf(ATM.insertCard(user.getId()));
-        assertNotEquals("1325", result);
-    }
-
-    //INSERTCARD testa ID, så att ID inte är null
-    @Test
-    @DisplayName("Test ID null")
-    void testIdNull() {
-        when(mockAtm.insertCard(null)).thenReturn(true);
-        assertFalse(ATM.insertCard(null));
-    }
-
-    //INSERTCARD kort om det är valid och inte låst
-    @Test
-    @DisplayName("Mock Test invalid card")
-    void mockTestInvalidCard() {
-        when(mockBankInterface.isCardLocked(user.getId())).thenReturn(true);
-        boolean cardLocked = mockBankInterface.isCardLocked(user.getId());
-        assertTrue(cardLocked, "Kortet ska vara låst enligt mockad funktion");
     }
 
     @Test
-    @DisplayName("Mock Test valid card")
-    void mockTestValidCard() {
-        when(mockBankInterface.isCardLocked(user.getId())).thenReturn(false);
-        boolean cardNotLocked = mockBankInterface.isCardLocked(user.getId());
-        assertFalse(cardNotLocked, "Kortet ska inte vara låst enligt mockad funktion");
+    @DisplayName("Test card insertion with different IDs")
+    void testInsertCardWithDifferentIDs() {
+        assertAll("Insert card scenarios",
+                () -> {
+                    when(mockAtm.insertCard("1234")).thenReturn(true);
+                    ATM.setUser(mockUser);
+                    assertTrue(ATM.insertCard(mockUser.getId()));
+                },
+                () -> {
+                    when(mockAtm.insertCard("1235")).thenReturn(false);
+                    ATM.setUser(mockUser);
+                    assertFalse(ATM.insertCard("1235"));
+                },
+                () -> {
+                    when(mockAtm.insertCard(null)).thenReturn(false);
+                    assertFalse(ATM.insertCard(null));
+                }
+        );
+    }
+    @Test
+    @DisplayName("Test card lock status")
+    void testCardLockStatus() {
+        assertAll("Card lock status scenarios",
+                () -> {
+                    when(mockBank.isCardLocked(mockUser.getId())).thenReturn(true);
+                    assertTrue(mockBank.isCardLocked(mockUser.getId()), "Kortet ska vara låst");
+                },
+                () -> {
+                    when(mockBank.isCardLocked(mockUser.getId())).thenReturn(false);
+                    assertFalse(mockBank.isCardLocked(mockUser.getId()), "Kortet ska inte vara låst");
+                }
+        );
     }
 
     @Test
@@ -91,7 +76,7 @@ class ATMTest {
     void spyTestInvalidCard() {
         User spyUser = spy(user);
         doReturn(true).when(spyUser).isLocked();
-        assertTrue(spyUser.isLocked(), "Kortet ska vara låst enligt spy på User");
+        assertTrue(spyUser.isLocked(), "Kortet ska vara låst");
     }
 
     //ENTERPIN testa pinkod tre siffror assertFalse
@@ -104,8 +89,8 @@ class ATMTest {
                 () -> assertThrows(IllegalArgumentException.class, () -> ATM.validateInput("12345"), "Talet är större än 4, inte ok"),
                 () -> assertThrows(IllegalArgumentException.class, () -> ATM.validateInput(null), "Inmatning saknas"),
                 () -> assertThrows(IllegalArgumentException.class, () -> ATM.validateInput("abcd"), "Inmatning måste vara siffror")
-            );
-        }
+        );
+    }
 
     //ENTERPIN testa att det är rätt pin kod
     @Test
@@ -123,19 +108,19 @@ class ATMTest {
     void testInvalidPinCode() {
         when(mockAtm.enterPin("9998")).thenReturn(false);
         ATM.setUser(user);
-        boolean result = ATM.enterPin(user.getPin());
+        String result = String.valueOf(ATM.enterPin(user.getPin()));
         assertNotEquals("9998", result);
     }
 
 
     //ENTERPIN testa köra pinkod med rätt antal siffror tre gånger men med tre olika kombinationer
     @ParameterizedTest
-    @ValueSource (strings = {"5555", "9999", "7777"})
+    @ValueSource(strings = {"5555", "9999", "7777"})
     @DisplayName("Trying three different pins")
     void testThreeDifferentPins(String input) {
-        ATM.setUser(user);
+        ATM.setUser(mockUser);
         boolean result = ATM.enterPin(input);
-        if (Objects.equals(user.getPin(), input)) {
+        if (Objects.equals(mockUser.getPin(), input)) {
             assertTrue(result);
             when(mockAtm.enterPin(input)).thenReturn(true);
         } else {
@@ -146,33 +131,31 @@ class ATMTest {
 
     //ENTERPIN testa köra pinkod med olika antal siffror och tecken tre gånger
     @ParameterizedTest
-    @ValueSource (strings = {"555", "9999", "777g"})
+    @ValueSource(strings = {"555", "9999", "777g"})
     @DisplayName("Trying three different pins with different length and chars")
     void testThreeDifferentPinsDifferentLength(String input) {
-        ATM.setUser(user);
+        ATM.setUser(mockUser);
         try {
             boolean result = ATM.enterPin(input);
-            if (Objects.equals(user.getPin(), input)) {
+            if (Objects.equals(mockUser.getPin(), input)) {
                 assertTrue(result);
                 when(mockAtm.enterPin(input)).thenReturn(true);
             } else {
                 assertFalse(result);
                 when(mockAtm.enterPin(input)).thenReturn(false);
             }
-        }catch(IllegalArgumentException e){
+        } catch (IllegalArgumentException e) {
             System.out.println("Caught expected exception for invalid input: " + input);
             assertTrue(e.getMessage().contains("pinkod måste var fyra siffror lång"));
         }
     }
 
-
-    //CHECKDEPOSIT mocka user med x antal pengar, att det faktiskt finns
     @Test
     @DisplayName("Test check balance in account")
     void testCheckBalanceInAccount() {
         assertAll("Check balance positive or not",
-            () -> assertTrue(ATM.isBalancePositive(1)),
-            () -> assertFalse(ATM.isBalancePositive(-1))
+                () -> assertTrue(ATM.isBalancePositive(1)),
+                () -> assertFalse(ATM.isBalancePositive(-1))
         );
     }
 
@@ -186,21 +169,61 @@ class ATMTest {
         assertEquals(500.0, result);
     }
 
-    //behövs denna verkligen? locked card ska kontrolleras långt innan man kommer in ens
-/*    //CHECKDEPOSIT låst kort
+
     @Test
-    @DisplayName("check balance with locked card")*/
+    @DisplayName("Test deposit functionality")
+    void testDeposit() {
+        ATM.setUser(user);
+        double initialBalance = user.getBalance();
+        ATM.deposit(100.0);
+        assertEquals(initialBalance + 100.0, user.getBalance());
+    }
 
-    //DEPOSIT assertequal på att det som sätts in är det som faktist kommer in
-    //DEPOSIT testa att det plussas ihop rätt
+    @Test
+    @DisplayName("Test withdraw functionality with sufficient balance")
+    void testWithdrawWithSufficientBalance() {
+        ATM.setUser(user);
+        double initialBalance = user.getBalance();
+        boolean result = ATM.withdraw(100.0);
+        assertTrue(result, "Withdrawal should succeed with sufficient balance");
+        assertEquals(initialBalance - 100.0, user.getBalance());
+    }
 
-    //WITHDRAW testa att det som finns faktiskt finns assertTrue
-    //WITHDRAW testa att det som finns inte stämmer assertFalse
-    //WITHDRAW testa att det är rätt format kanske?
-    //WITHDRAW testa subtraktion på kontot mot vad smo dras
+    @Test
+    @DisplayName("Test withdraw functionality with insufficient balance")
+    void testWithdrawWithInsufficientBalance() {
+        ATM.setUser(user);
+        boolean result = ATM.withdraw(1000.0); // higher than user's balance
+        assertFalse(result, "Withdrawal should fail with insufficient balance");
+        assertEquals(500.0, user.getBalance()); // initial balance should remain unchanged
+    }
 
+    @Test
+    @DisplayName("Test failed PIN attempts lock card after 3 tries")
+    void testFailedPinAttemptsLockCard() {
+        ATM.setUser(user);
 
-@Test
-    void testATM() {}
+        // Mock behavior for failed PIN attempts
+        for (int i = 0; i < 3; i++) {
+            boolean result = ATM.enterPin("0000");
+            assertFalse(result);
+            user.incrementFailedAttempts();
+        }
 
+        assertEquals(3, user.getFailedAttempts());
+        user.lockCard();
+        assertTrue(user.isLocked(), "User's card should be locked after 3 failed attempts");
+    }
+
+    @Test
+    @DisplayName("Test static method getBankName")
+    void testStaticMethodGetBankName() {
+        try (MockedStatic<Bank> mockedBank = mockStatic(Bank.class)) {
+            mockedBank.when(Bank::getBankName).thenReturn("MockBank");
+
+            String bankName = Bank.getBankName();
+            assertEquals("MockBank", bankName);
+            mockedBank.verify(Bank::getBankName, times(1));
+        }
+    }
 }

@@ -11,18 +11,17 @@ public class ATM {
     }
 
     public boolean insertCard(String userId) {
+        if (currentUser == null || currentUser.isLocked()) return false;
         return currentUser != null && Objects.equals(currentUser.getId(), userId);
     }
 
     public boolean enterPin(String pin) {
-        /*if (currentUser.getFailedAttempts() < 3) {*/
+        if (currentUser != null) {
+        }
             if (!validateInput(pin)) {
-                //currentUser.incrementFailedAttempts();
-                //System.out.println("Invalid Pin");
-                //System.out.println(currentUser.getFailedAttempts());
                 return false;
             }
-        //}
+
         //returnerar true om pin inte är null och stämmer överens med pin från användaren
         return currentUser.getPin() != null && Objects.equals(currentUser.getPin(), pin);
     }
@@ -35,11 +34,23 @@ public class ATM {
     }
 
     public void deposit(double amount) {
-
+        if (currentUser != null && amount > 0) {
+            currentUser.deposit(amount);
+            System.out.println("Deposited: " + amount);
+        } else {
+            System.out.println("Invalid deposit amount.");
+        }
     }
 
     public boolean withdraw(double amount) {
-        return true;
+        if (currentUser != null && amount > 0 && currentUser.getBalance() >= amount) {
+            currentUser.withdraw(amount);
+            System.out.println("Withdrawn: " + amount);
+            return true;
+        } else {
+            System.out.println("Insufficient balance or invalid amount.");
+            return false;
+        }
     }
 
     public static boolean validateInput(String input) throws IllegalArgumentException {
