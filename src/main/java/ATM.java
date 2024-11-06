@@ -1,33 +1,59 @@
 import java.util.Objects;
-import java.util.Scanner;
 
 public class ATM {
     private Bank bank;
     private User currentUser;
 
+    public static boolean validateInput(String input) throws IllegalArgumentException {
+        if (input == null || input.length() != 4 || !input.matches("\\d{4}")) {
+            throw new IllegalArgumentException("pinkod måste var fyra siffror lång");
+        } else {
+            return true;
+        }
+    }
 
     public void setUser(User user) {
         this.currentUser = user;
     }
 
+    //kontrollerar att user inte är null och att kortet inte är låst
     public boolean insertCard(String userId) {
         if (currentUser == null || currentUser.isLocked()) return false;
         return currentUser != null && Objects.equals(currentUser.getId(), userId);
     }
 
+    //kontrollerar pin och att det inte testas för många gånger
     public boolean enterPin(String pin) {
-        if (currentUser != null) {
+        if (currentUser == null) {
+            System.out.println("Ingen användare inloggad");
+            return false;
         }
-            if (!validateInput(pin)) {
+
+        if (!validateInput(pin)) {
+            int remainingAttempts = 3 - currentUser.getFailedAttempts();
+            currentUser.incrementFailedAttempts();
+
+            if (remainingAttempts > 1) {
+                System.out.println("Fel pinkod, testa igen. Du har nu " + (remainingAttempts - 1) + " försök kvar");
+            } else if (remainingAttempts == 1) {
+                System.out.println("Fel pinkod, ett försök kvar");
+            }
+
+            if (currentUser.getFailedAttempts() >= 3) {
+                currentUser.lockCard();
+                System.out.println("Ditt kort är nu låst, kontakta " + Bank.getBankName() + " för hjälp");
                 return false;
             }
 
-        //returnerar true om pin inte är null och stämmer överens med pin från användaren
-        return currentUser.getPin() != null && Objects.equals(currentUser.getPin(), pin);
+            return false;
+        }
+        currentUser.resetFailedAttempts();
+        return Objects.equals(currentUser.getPin(), pin);
     }
 
+
     public double checkBalance(String id) {
-        if(currentUser != null) {
+        if (currentUser != null && currentUser.getId().equals(id)) {
             return currentUser.getBalance();
         }
         return 0;
@@ -53,39 +79,12 @@ public class ATM {
         }
     }
 
-    public static boolean validateInput(String input) throws IllegalArgumentException {
-        if (input == null || input.length() != 4 || !input.matches("\\d{4}")) {
-            throw new IllegalArgumentException("pinkod måste var fyra siffror lång");
-        } else {
-            return true;
-        }
-    }
-
-
     public boolean isBalancePositive(int balance) {
         return balance >= 0;
     }
 
-    public static void main(String[] args){
-        User user = new User("1234", "9999", 500.0);
-        ATM atm = new ATM();
-        atm.setUser(user);
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("hej, välkommen till banken, sätt in ditt kort(alltså skriv in ditt id");
-        String id = scanner.nextLine();
-        System.out.println("skriv in din pin kod");
-        String pin = scanner.nextLine();
-
-        if(atm.insertCard(id) && atm.enterPin(pin)) {
-            System.out.println("välkommen");
-        } else {
-            System.out.println("oopsie");
-        }
-        /*atm.insertCard("1234");
-        atm.enterPin("9999");
-        System.out.println(user.getBalance());
-        System.out.println(atm.withdraw(1));
-        System.out.println(atm.checkBalance("1234"));*/
-
+    public void endSession() {
+        this.currentUser = null;
+        System.out.println("Uttag avbrutet, vi ses");
     }
 }
